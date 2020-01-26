@@ -1,0 +1,60 @@
+import pandas as pd
+import pylab as pl
+from sklearn.metrics import precision_recall_curve
+import csv
+
+def readSOM(filename):
+    data = pd.read_csv(filename)
+    # calculate the mean for all the columns that having the same values of Chromosome, Sigma and Alpha 
+    avgSOM = data.groupby(['Chromosome', 'Sigma', 'Alpha'],as_index=False).mean()
+    # only return chromosome 1 
+    return avgSOM[:16] 
+
+def readCAGT(filename):
+    data = pd.read_csv(filename)
+    avgCAGT = data.groupby(['Chromosome', 'K', 'Max_Dist'],as_index=False).mean()
+    return avgCAGT[:16]
+
+def plot_precision_recall(lines, fname):
+    pl.clf()
+    for precision, recall, label in lines:
+        pl.plot(recall, precision, label=label)
+    pl.xlabel('Recall')
+    pl.ylabel('Precision')
+    pl.ylim([0.0, 1.0])
+    pl.xlim([0.0, 1.0])
+    pl.title('Precision-Recall for GM12878_chr1 Promoter')
+    pl.legend(loc="upper right")
+    pl.show()
+    pl.savefig(fname)
+
+def main(filename):
+    lines = []
+    som_file = []
+    for s in filename:
+        if s[0:3] == 'som':
+            som_file.append(s)
+        elif s[0:4] == 'cagt':
+            cagt = s
+        else : 
+            signal = s    
+
+    for i,fname in enumerate(som_file):
+        y_test = readSOM(fname)
+        label = fname[0:6]
+        lines.append((y_test['Promoter_Precision'], y_test['Promoter_Recall'],label))
+    
+    y_test = readCAGT(cagt)
+    lines.append((y_test['Promoter_Precision'], y_test['Promoter_Recall'], 'CAGT'))
+    dataSignal = pd.read_csv(signal)
+    y_test = dataSignal[:16]
+    lines.append((y_test['Promoter_Precision'], y_test['Promoter_Recall'], 'Signal Only'))
+
+    png_fname = 'pr_curve.png'
+    plot_precision_recall(lines, png_fname)
+    
+main(('som_vn_chromhmmperm_intrachrom_pr.csv',
+        'som_vn_intrachrom_pr.csv',
+        'signal_intrachrom_pr.csv',
+        'cagt_intrachrom_pr.csv',
+        'som_intrachrom_pr.csv'))
