@@ -1,0 +1,70 @@
+import pandas as pd
+from matplotlib import pyplot as pl
+from sklearn.metrics import precision_recall_curve
+import csv
+
+# Read in SOM flat files
+def readSOM(filename):
+    data = pd.read_csv(filename, index_col = 0)
+    data = data[:320]
+    avgSOM = data.groupby(['Cell_Type','Chromosome', 'Sigma', 'Alpha'],as_index=False).mean()
+    return avgSOM[:16]
+
+# Read in CAGT flat files
+def readCAGT(filename):
+    data = pd.read_csv(filename, index_col = 0)
+    data = data[:320]
+    avgCAGT = data.groupby(['Cell_Type','Chromosome', 'K', 'Max_Dist'],as_index=False).mean()
+    return avgCAGT[:16]
+
+def readSignal(filename):
+    data = pd.read_csv(filename, index_col = 0)
+    return data[:21]
+
+def plot_precision_recall(lines, fname):
+    pl.clf()
+
+    for precision, recall, label in lines:
+        pl.plot(recall, precision, 'o',label=label)
+    
+    pl.xlabel('Recall')
+    pl.ylabel('Precision')
+    pl.ylim([0.0, 1.0])
+    pl.xlim([0.0, 1.0])
+    pl.title('Precision-Recall Plot for GM12878 - Repressor')
+    pl.legend(loc="upper right")
+    pl.savefig(fname)
+
+
+def main(filename):
+    lines = []
+    som_file = []
+    re_precision = 'Repressor_Precision'
+    re_recall = 'Repressor_Recall'
+    for s in filename:
+        if s[0:3] == 'som':
+            som_file.append(s)
+        elif s[0:4] == 'cagt':
+            cagt = s
+        else : 
+            signal = s    
+
+    for i,fname in enumerate(som_file):
+        y_test = readSOM(fname)
+        label = ['SOM_VN','Permuted Signal','Permuted Labels']
+        lines.append((y_test[re_precision], y_test[re_recall],label[i]))
+        
+    y_test = readCAGT(cagt)
+    lines.append((y_test[re_precision], y_test[re_recall], 'CAGT'))
+    
+    dataSignal = readSignal(signal)
+    lines.append((dataSignal[re_precision], dataSignal[re_recall], 'Signal Only'))
+
+    plot_precision_recall(lines, 'GM12878_Repressor.png')
+    
+main(('som_vn_intrachrom_pr.csv',
+      'som_vn_signalperm_intrachrom_pr.csv',
+        'som_vn_chromhmmperm_intrachrom_pr.csv',
+        'cagt_intrachrom_pr.csv',
+      'signal_intrachrom_pr.csv'
+        ))
